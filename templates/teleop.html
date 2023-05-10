@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils_3d/control_utils_3d.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous" defer></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <video class="input_video"></video>
+    <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+    <div class="landmark-grid-container"></div>
+  </div>
+</body>
+</html>
+
+<script type="module">
+
+    //ROS STUFF
+    function wsConnect(){
+      //implment recconecting to ros bridge
+    }
+
+
+    var ros = new ROSLIB.Ros({
+            // url : 'wss://bamvideoserver.com:9090'
+            url : 'ws://0.0.0.0:9090'
+        });
+
+    ros.on('connection', function() {
+        console.log('Connected to websocket server.');
+        // setCamera();
+    });
+
+    ros.on('error', function(error) {
+        console.log('Error connecting to websocket server: ', error);
+    });
+
+    ros.on('close', function() {
+        console.log('Connection to websocket server closed.');
+    });
+
+    var teleopCmdTopic = new ROSLIB.Topic({
+        ros : ros,
+        name : '/media_pipe_pose',
+        messageType : 'b1_core/MediaPipePose'
+    });
+    
+    var xCmd = 0.5;
+    var yCmd = 0.5;
+    var zCmd = 0.5;
+    var thetaCmd = 0.25;
+    var gripperCmd = 1;
+    var handCmd = 1;
+
+
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const canvasCtx = canvasElement.getContext('2d');
+    const landmarkContainer = document.getElementsByClassName('landmark-grid-container')[0];
+    const grid = new LandmarkGrid(landmarkContainer);
+    
+    var poseScreenResults;
+    var poseWorldResults;
+    var handsScreenResults;
+    var handsWorldResults;
+    var multiHandednessResults;
+    var resultImage;
+
+
+    function onHandsResults(results) {
+
+        if (results.multiHandWorldLandmarks) {
+            handsWorldResults = results.multiHandWorldLandmarks;
+            handsScreenResults = results.multiHandLandmarks;
+            multiHandednessResults = results.multiHandedness;
+        }
+
+    }
+
+
+    function onPoseResults(results) {
+        if (results.poseLandmarks) {
+            poseWorldResults = results.poseWorldLandmarks;
+            poseScreenResults = results.poseLandmarks;
+            resultImage = results.image;
+        }
+    }
+
+    // https://github.com/google/mediapipe/blob/master/docs/solutions/hands.md#model_complexity
+    const hands = new Hands({locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+    }});
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 0,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    hands.onResults(onHandsResults);
+
+    // https://github.com/google/mediapipe/blob/master/docs/solutions/pose.md
+    const pose = new Pose({locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+    }});
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: false,
+      smoothSegmentation: false,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    pose.onResults(onPoseResults);
+    
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await pose.send({image: videoElement});
+        await hands.send({image: videoElement});
+      },
+      width: 1280,
+      height: 720
+    });
+    camera.start();
+
+
+    // create array that will be sent as msg
+    const nBody = 33;
+    const nHand = 21;
+
+    var bodyArray = new Array(nBody); 
+    for (let i=0; i<nBody; ++i){
+        bodyArray[i] = {x:0,y:0,z:0};
+    }
+    var rightHandArray = new Array(nHand); 
+    var leftHandArray = new Array(nHand); 
+
+    for (let i=0; i<nHand; ++i){
+        rightHandArray[i] = {x:0,y:0,z:0};
+        leftHandArray[i] = {x:0,y:0,z:0};
+    }
+
+
+    function spin() {
+        if (poseScreenResults == null || handsScreenResults == null){
+            return;
+        }
+        // update camera
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        canvasCtx.translate(canvasElement.width, 0);
+        canvasCtx.scale(-1, 1);
+
+        canvasCtx.drawImage(resultImage, 0, 0, canvasElement.width, canvasElement.height);
+
+        drawConnectors(canvasCtx, poseScreenResults, POSE_CONNECTIONS,
+                        {color: '#00FF00', lineWidth: 4});
+        drawLandmarks(canvasCtx, poseScreenResults,
+                    {color: '#FF0000', lineWidth: 2});
+
+        for (const landmarks of handsScreenResults) {
+          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
+                         {color: '#00FF00', lineWidth: 5});
+          drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
+        }
+
+        canvasCtx.restore();
+
+        grid.updateLandmarks(poseWorldResults);
+
+
+
+        //send msg
+        
+        for (let i=0; i<nBody; ++i){
+            bodyArray[i] = {x:poseWorldResults[i].x,
+                            y:poseWorldResults[i].y,
+                            z:poseWorldResults[i].z};
+        }
+
+        for (let index = 0; index < multiHandednessResults.length; index++) {
+            const classification = multiHandednessResults[index];
+            if (classification.label == "Right"){ 
+                for (let i=0; i<nHand; ++i){
+                    rightHandArray[i] = {x:handsWorldResults[index][i].x,
+                                         y:handsWorldResults[index][i].y,
+                                         z:handsWorldResults[index][i].z};
+                }
+            }
+            else if (classification.label == "Left"){ 
+                for (let i=0; i<nHand; ++i){
+                    leftHandArray[i] = {x:handsWorldResults[index][i].x,
+                                        y:handsWorldResults[index][i].y,
+                                        z:handsWorldResults[index][i].z};
+                }
+            }
+        }
+
+        // send teleop_cmd
+        var poseMsg = new ROSLIB.Message({
+            header : {
+                seq : 0,
+                stamp : 0,
+                frame_id : ""
+            },
+            body : bodyArray,
+            right_hand : rightHandArray,
+            left_hand : leftHandArray
+        });
+
+        teleopCmdTopic.publish(poseMsg);
+
+    }
+
+    setInterval(spin, 250);
+
+    </script>

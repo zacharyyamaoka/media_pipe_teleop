@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+
+</head>
+
+<body>
+
+  <div class="container hide">
+    <video class="input_video"></video>
+  </div>
+       
+  <div class="container">
+      <canvas class="output_canvas" width="800px" height="600px"></canvas>
+  </div>
+
+</body>
+</html>
+
+<style>
+
+.container{
+    background-color: rgb(255, 255, 255);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 3px solid rgb(90, 94, 90);
+    height: 600px;
+}
+
+.hide{
+  display: none;
+}
+
+.demo.column.left {
+    background-color: green;
+    flex: 80%;
+}
+.demo.column.right {
+    background-color: blue;
+    flex: 20%;
+}
+</style>
+
+
+<script type="text/javascript">
+   var v = Vec2(1, 1);
+   console.log(v)
+</script> 

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous" defer></script>
+</head>
+
+<body>
+
+    <div class="demo container"> 
+        <div class="demo column left">
+            <video class="input_video"></video>
+        </div>
+        <div class="demo column right">
+            <div>
+                <canvas class="output_canvas" max-width="1280px" max-height="720px"></canvas>
+            </div>
+            <div>
+                Instructions
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
+
+<style>
+
+.container{
+    background-color: red;
+    display: flex;
+    height: 600px;
+}
+
+.demo.column.left {
+    background-color: green;
+    flex: 80%;
+}
+.demo.column.right {
+    background-color: blue;
+    flex: 20%;
+}
+</style>
+
+<script type="module">
+
+
+    function startApp(){
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const canvasCtx = canvasElement.getContext('2d');
+
+    function imgCords(loc){
+        return {x:loc.x * canvasElement.width, y:loc.y*canvasElement.height}
+    }
+
+    function onResults(results) {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    //   canvasCtx.translate(canvasElement.width, 0);
+    //   canvasCtx.scale(-1, 1);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+        if (results.multiHandWorldLandmarks) {
+            // console.log(results.multiHandWorldLandmarks)
+            if(results.multiHandWorldLandmarks[0]){
+                var f1 = results.multiHandWorldLandmarks[0][4]; //thumbTip
+                var f2 = results.multiHandWorldLandmarks[0][8]; //indexFingerTip
+                
+                var distance = Math.sqrt(Math.pow(f1.x - f2.x,2) + Math.pow(f1.y - f2.y,2))
+
+                if (distance < 0.015) { //less than 3cm
+                    console.log("GRASPING")
+                }
+                
+            }
+        }
+
+      if (results.multiHandLandmarks) {
+
+        if(results.multiHandLandmarks[0]){
+                var f1 = results.multiHandLandmarks[0][4]; //thumbTip
+                var f2 = results.multiHandLandmarks[0][8]; //indexFingerTip
+                console.log(f1.x)
+
+                f1 = imgCords(f1)
+                f2 = imgCords(f2)
+
+                // console.log(f1.x)
+                canvasCtx.beginPath(); // Start a new path
+                canvasCtx.moveTo(f1.x, f1.y); // Move the pen to (30, 50)
+                canvasCtx.lineTo(f2.x, f2.y); // Draw a line to (150, 100)
+                canvasCtx.stroke(); // Render the path
+                
+            }
+
+
+        for (const landmarks of results.multiHandLandmarks) {
+          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
+                         {color: '#00FF00', lineWidth: 5});
+          drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
+        }
+      }
+      canvasCtx.restore();
+    }
+    
+    const hands = new Hands({locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+    }});
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    hands.onResults(onResults);
+    
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({image: videoElement});
+      },
+      width: 1280,
+      height: 720
+    });
+    camera.start();
+    }
+
+
+    function checkReady(){
+
+        if (navigator.mediaDevices) {
+            navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: true
+            })
+            .then((stream) => {
+
+            startApp();
+
+            })
+            .catch((err) => {
+            setTimeout(checkReady, 1000);
+            console.error("No Devices Found");
+            });
+        }
+        else{
+            console.log("MediaDevices not Defined")
+            setTimeout(checkReady, 1000);
+        }
+    
+    };
+
+    checkReady();
+
+</script>

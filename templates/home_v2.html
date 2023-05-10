@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous" defer></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.js"></script>
+  <script type="text/javascript">
+    (function inject(clean,precision,undef){var isArray=function(a){return Object.prototype.toString.call(a)==="[object Array]"};function Vec2(x,y){if(!(this instanceof Vec2)){return new Vec2(x,y)}if(isArray(x)){y=x[1];x=x[0]}else if("object"===typeof x&&x){y=x.y;x=x.x}this.x=Vec2.clean(x||0);this.y=Vec2.clean(y||0)}Vec2.prototype={change:function(fn){if(typeof fn==="function"){if(this.observers){this.observers.push(fn)}else{this.observers=[fn]}}else if(this.observers&&this.observers.length){for(var i=this.observers.length-1;i>=0;i--){this.observers[i](this,fn)}}return this},ignore:function(fn){if(this.observers){var o=this.observers,l=o.length;while(l--){o[l]===fn&&o.splice(l,1)}}return this},set:function(x,y,silent){if("number"!=typeof x){silent=y;y=x.y;x=x.x}if(this.x===x&&this.y===y){return this}var orig=null;if(this.observers&&this.observers.length){orig=this.clone()}this.x=Vec2.clean(x);this.y=Vec2.clean(y);if(silent!==false){return this.change(orig)}},zero:function(){return this.set(0,0)},clone:function(){return new this.constructor(this.x,this.y)},negate:function(returnNew){if(returnNew){return new this.constructor(-this.x,-this.y)}else{return this.set(-this.x,-this.y)}},add:function(vec2,returnNew){if(!returnNew){this.x+=vec2.x;this.y+=vec2.y;return this.change()}else{return new this.constructor(this.x+vec2.x,this.y+vec2.y)}},subtract:function(vec2,returnNew){if(!returnNew){this.x-=vec2.x;this.y-=vec2.y;return this.change()}else{return new this.constructor(this.x-vec2.x,this.y-vec2.y)}},multiply:function(vec2,returnNew){var x,y;if("number"!==typeof vec2){x=vec2.x;y=vec2.y}else{x=y=vec2}if(!returnNew){return this.set(this.x*x,this.y*y)}else{return new this.constructor(this.x*x,this.y*y)}},rotate:function(r,inverse,returnNew){var x=this.x,y=this.y,cos=Math.cos(r),sin=Math.sin(r),rx,ry;inverse=inverse?-1:1;rx=cos*x-inverse*sin*y;ry=inverse*sin*x+cos*y;if(returnNew){return new this.constructor(rx,ry)}else{return this.set(rx,ry)}},length:function(){var x=this.x,y=this.y;return Math.sqrt(x*x+y*y)},lengthSquared:function(){var x=this.x,y=this.y;return x*x+y*y},distance:function(vec2){var x=this.x-vec2.x;var y=this.y-vec2.y;return Math.sqrt(x*x+y*y)},normalize:function(returnNew){var length=this.length();var invertedLength=length<Number.MIN_VALUE?0:1/length;if(!returnNew){return this.set(this.x*invertedLength,this.y*invertedLength)}else{return new this.constructor(this.x*invertedLength,this.y*invertedLength)}},equal:function(v,w){if(w===undef){w=v.y;v=v.x}return Vec2.clean(v)===this.x&&Vec2.clean(w)===this.y},abs:function(returnNew){var x=Math.abs(this.x),y=Math.abs(this.y);if(returnNew){return new this.constructor(x,y)}else{return this.set(x,y)}},min:function(v,returnNew){var tx=this.x,ty=this.y,vx=v.x,vy=v.y,x=tx<vx?tx:vx,y=ty<vy?ty:vy;if(returnNew){return new this.constructor(x,y)}else{return this.set(x,y)}},max:function(v,returnNew){var tx=this.x,ty=this.y,vx=v.x,vy=v.y,x=tx>vx?tx:vx,y=ty>vy?ty:vy;if(returnNew){return new this.constructor(x,y)}else{return this.set(x,y)}},clamp:function(low,high,returnNew){var ret=this.min(high,true).max(low);if(returnNew){return ret}else{return this.set(ret.x,ret.y)}},lerp:function(vec,amount){return this.add(vec.subtract(this,true).multiply(amount),true)},skew:function(){return new this.constructor(-this.y,this.x)},dot:function(b){return Vec2.clean(this.x*b.x+b.y*this.y)},perpDot:function(b){return Vec2.clean(this.x*b.y-this.y*b.x)},angleTo:function(vec){return Math.atan2(this.perpDot(vec),this.dot(vec))},divide:function(vec2,returnNew){var x,y;if("number"!==typeof vec2){x=vec2.x;y=vec2.y}else{x=y=vec2}if(x===0||y===0){throw new Error("division by zero")}if(isNaN(x)||isNaN(y)){throw new Error("NaN detected")}if(returnNew){return new this.constructor(this.x/x,this.y/y)}return this.set(this.x/x,this.y/y)},isPointOnLine:function(start,end){return(start.y-this.y)*(start.x-end.x)===(start.y-end.y)*(start.x-this.x)},toArray:function(){return[this.x,this.y]},fromArray:function(array){return this.set(array[0],array[1])},toJSON:function(){return{x:this.x,y:this.y}},toString:function(){return"("+this.x+", "+this.y+")"},constructor:Vec2};Vec2.fromArray=function(array,ctor){return new(ctor||Vec2)(array[0],array[1])};Vec2.precision=precision||8;var p=Math.pow(10,Vec2.precision);Vec2.clean=clean||function(val){if(isNaN(val)){throw new Error("NaN detected")}if(!isFinite(val)){throw new Error("Infinity detected")}if(Math.round(val)===val){return val}return Math.round(val*p)/p};Vec2.inject=inject;if(!clean){Vec2.fast=inject(function(k){return k});if(typeof module!=="undefined"&&typeof module.exports=="object"){module.exports=Vec2}else{window.Vec2=window.Vec2||Vec2}}return Vec2})();
+  </script>
+
+
+</head>
+
+<body>
+
+  <div class="container hide">
+    <video class="input_video"></video>
+  </div>
+       
+  <div class="container">
+      <canvas class="output_canvas" width="800px" height="600px"></canvas>
+  </div>
+
+  <div class="container">
+    <div id="mjpeg"></div>
+    <!-- <canvas id="mjpeg" class="robot_view" width="800px" height="600px"></canvas> -->
+</div>
+
+</body>
+</html>
+
+<style>
+
+.container{
+    background-color: rgb(255, 255, 255);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 3px solid rgb(90, 94, 90);
+    height: 600px;
+}
+
+.hide{
+  display: none;
+}
+
+.demo.column.left {
+    background-color: green;
+    flex: 80%;
+}
+.demo.column.right {
+    background-color: blue;
+    flex: 20%;
+}
+</style>
+
+<script type="text/javascript" type="text/javascript">
+//CAMERA STUFF
+function setCamera() {
+            console.log('set camera method')
+            var cameraViewer = new MJPEGCANVAS.Viewer({
+                divID: 'mjpeg',
+                host: '{{ ip }}',
+                width: 1280,
+                height: 720,
+                topic: '/image_raw',
+                port: 8080,
+            })
+        };
+
+</script>
+<script type="module">
+    //ROS STUFF
+
+    function wsConnect(){
+      //implment recconecting to ros bridge
+    }
+
+
+    var ros = new ROSLIB.Ros({
+            url : 'wss://bamvideoserver.com:9090'
+        });
+
+    ros.on('connection', function() {
+        console.log('Connected to websocket server.');
+        // setCamera();
+    });
+
+    ros.on('error', function(error) {
+        console.log('Error connecting to websocket server: ', error);
+    });
+
+    ros.on('close', function() {
+        console.log('Connection to websocket server closed.');
+    });
+
+    var teleopCmdTopic = new ROSLIB.Topic({
+        ros : ros,
+        name : '/teleop_cmd',
+        messageType : 'geometry_msgs/Twist'
+    });
+
+    var xCmd = 0.5;
+    var yCmd = 0.5;
+    var zCmd = 0.5;
+    var thetaCmd = 0.25;
+    var gripperCmd = 1;
+    var handCmd = 1;
+
+
+
+
+    //MEDIA PIPE STUFF
+
+    function startApp(){
+    const videoElement = document.getElementsByClassName('input_video')[0];
+    const canvasElement = document.getElementsByClassName('output_canvas')[0];
+    const canvasCtx = canvasElement.getContext('2d');
+
+    function imgCords(loc){
+        return {x:loc.x * canvasElement.width, y:loc.y*canvasElement.height}
+    }
+    function screenCords(loc){
+        return {x:loc.x / canvasElement.width, y:loc.y / canvasElement.height}
+    }
+    function vec2ImgCords(vec2){
+      vec2.set(vec2.x * canvasElement.width, vec2.y*canvasElement.height)
+        return true
+    }
+    function onResults(results) {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.translate(canvasElement.width, 0);
+      canvasCtx.scale(-1, 1);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+      if (results.multiHandWorldLandmarks) {
+          if(results.multiHandWorldLandmarks[0]){
+              var f1 = results.multiHandWorldLandmarks[0][4]; //thumbTip
+              var f2 = results.multiHandWorldLandmarks[0][8]; //indexFingerTip
+              
+              var distance = Math.sqrt(Math.pow(f1.x - f2.x,2) + Math.pow(f1.y - f2.y,2))
+              gripperCmd = distance
+              if (distance < 0.015) { //less than 3cm
+                  console.log("GRASPING")
+              }
+              
+          }
+      }
+
+      if (results.multiHandLandmarks) {
+
+        if(results.multiHandLandmarks[0]){
+                var thumbTip = results.multiHandLandmarks[0][4]; //thumbTip
+                var indexFingerTip = results.multiHandLandmarks[0][8]; //indexFingerTip
+
+                var thumbMcp = results.multiHandLandmarks[0][2]; //thumbTip
+                var indexFingerMcp = results.multiHandLandmarks[0][5]; //indexFingerTip
+                
+                thumbTip = imgCords(thumbTip)
+                indexFingerTip = imgCords(indexFingerTip)
+                thumbMcp = imgCords(thumbMcp)
+                indexFingerMcp = imgCords(indexFingerMcp)
+
+
+                var thumpTipVec = Vec2(thumbTip.x, thumbTip.y);
+                var indexFingerTipVec = Vec2(indexFingerTip.x, indexFingerTip.y);
+
+                var thumbMcpVec = Vec2(thumbMcp.x, thumbMcp.y);
+                var indexFingerMcpTipVec = Vec2(indexFingerMcp.x, indexFingerMcp.y);
+
+                var mcpLineVec = thumbMcpVec.subtract(indexFingerMcpTipVec, true);
+                var mcpMidPointVec = indexFingerMcpTipVec.add(mcpLineVec.multiply(0.35, true), true)
+
+                if (results.multiHandedness[0].label == "Right"){
+                  var mcpLinePerpVec = mcpLineVec.clone().rotate(1.5708);
+                  handCmd = 0;
+                } else{
+                  var mcpLinePerpVec = mcpLineVec.clone().rotate(-1.5708);
+                  handCmd = 1;
+                }
+
+                var xAxis = Vec2(1,0);
+
+                var temp = mcpMidPointVec.add(mcpLinePerpVec, true)
+                // var temp2 = mcpMidPointVec.add(xAxis, true)
+
+                var theta = mcpLinePerpVec.angleTo(xAxis)
+                console.log(theta)
+
+                // console.log(mcpLineVec);
+                // console.log(mcpMidPointVec);
+
+                // console.log(f1.x)
+                canvasCtx.fillRect(temp.x, temp.y,5,5);
+                // canvasCtx.fillRect(temp2.x, temp2.y,5,5);
+
+                canvasCtx.fillRect(mcpMidPointVec.x, mcpMidPointVec.y,5,5);
+                canvasCtx.beginPath(); // Start a new path
+                canvasCtx.moveTo(thumbTip.x, thumbTip.y); // Move the pen to (30, 50)
+                canvasCtx.lineTo(indexFingerTip.x, indexFingerTip.y); // Draw a line to (150, 100)
+                canvasCtx.stroke(); // Render the path
+                canvasCtx.beginPath(); // Start a new path
+                canvasCtx.moveTo(thumbMcp.x, thumbMcp.y); // Move the pen to (30, 50)
+                canvasCtx.lineTo(indexFingerMcp.x, indexFingerMcp.y); // Draw a line to (150, 100)
+                canvasCtx.stroke(); // Render the path
+                
+                
+                mcpMidPointVec = screenCords(mcpMidPointVec)
+                
+                xCmd = mcpMidPointVec.x
+                yCmd = mcpMidPointVec.y
+                zCmd = 0.5
+                thetaCmd = theta
+
+
+                var teleopMsg = new ROSLIB.Message({
+                linear : {
+                  x : xCmd,
+                  y : yCmd,
+                  z : zCmd
+                  },
+                angular : {
+                  x : thetaCmd, 
+                  y : gripperCmd, 
+                  z : handCmd 
+                  }
+                });
+
+                teleopCmdTopic.publish(teleopMsg);
+
+            }
+
+
+        for (const landmarks of results.multiHandLandmarks) {
+          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
+                         {color: '#00FF00', lineWidth: 5});
+          drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
+        }
+      }
+
+      canvasCtx.restore();
+    }
+    
+    const hands = new Hands({locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+    }});
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    hands.onResults(onResults);
+    
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({image: videoElement});
+      },
+      width: 800,
+      height: 600
+    });
+    camera.start();
+    }
+
+    startApp();
+
+    // function checkReady(){
+
+    //     if (navigator.mediaDevices) {
+    //         navigator.mediaDevices.getUserMedia({
+    //         audio: false,
+    //         video: true
+    //         })
+    //         .then((stream) => {
+
+    //         startApp();
+
+    //         })
+    //         .catch((err) => {
+    //         setTimeout(checkReady, 1000);
+    //         console.error("No Devices Found");
+    //         });
+    //     }
+    //     else{
+    //         console.log("MediaDevices not Defined")
+    //         setTimeout(checkReady, 1000);
+    //     }
+    
+    // };
+
+    // checkReady();
+
+</script>
